@@ -1,0 +1,3 @@
+#+TITLE: Guild Wars 2 Trading Post Database
+
+We populate the database through https://gitlab.com/Silvers_Gw2/Market_Data_Processer/-/wikis/endpoints.
