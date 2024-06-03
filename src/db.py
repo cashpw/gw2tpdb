@@ -1,7 +1,7 @@
 import os
 import sqlite3
 
-def create_database(conn):
+def create_tables(conn):
     """Create a new SQLite database at db_path.
 
     Keeps the connection open."""

@@ -5,6 +5,7 @@ import json
 from enum import StrEnum
 from types import Optional
 from datetime import datetime
+
 def get_daily(item_id: Int, start: datetime = None, end: datetime = None):
     """Fetch daily historic data for given ITEM_ID."""
 
