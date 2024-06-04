@@ -1,5 +1,5 @@
-CREATE TABLE IF NOT EXISTS item_daily (
-  id INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS items_daily (
+  id INTEGER NOT NULL,
   buy_delisted INTEGER,
   buy_listed INTEGER,
   buy_price_avg INTEGER,
@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS item_daily (
   buy_sold INTEGER,
   buy_value INTEGER,
   count INTEGER,
-  timestamp INTEGER,
   sell_delisted INTEGER,
   sell_listed INTEGER,
   sell_price_avg INTEGER,
@@ -26,4 +25,7 @@ CREATE TABLE IF NOT EXISTS item_daily (
   sell_quantity_stdev REAL,
   sell_sold INTEGER,
   sell_value INTEGER,
+  timestamp INTEGER NOT NULL,
+
+  PRIMARY KEY (id, timestamp)
 );
