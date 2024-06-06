@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "gw2tpdb"
+version = "0.0.1"
+authors = [
+  { name="Cash Prokop-Weaver" },
+]
+description = "Database for Guild Wars 2 Trading Post"
+readme = "README.md"
+requires-python = ">=3.8"
+
+[project.urls]
+Homepage = "https://github.com/cashpw/gw2tpdb"
+Issues = "https://github.com/cashpw/gw2tpdb/issues"
