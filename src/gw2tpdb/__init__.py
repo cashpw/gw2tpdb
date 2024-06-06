@@ -83,7 +83,7 @@ class Gw2TpDb():
         if self._auto_update:
             self.update_daily(item_id)
 
-        rows_opt = self._execute(f"SELECT * FROM daily_history WHERE id = {item_id}")
+        rows_opt = self._execute(f"SELECT * FROM daily_history WHERE id = {item_id} ORDER BY utc_timestamp ASC")
         if rows_opt is None:
             logger.debug(f"No items (id = {item_id}) found in database")
             return None
@@ -91,6 +91,25 @@ class Gw2TpDb():
 
         return list(map(row_to_history_entry, rows))
 
+    def get_dailies(self, item_ids: List[int]) -> Optional[dict[List[HistoryEntry]]]:
+        """Return daily data for ITEM_ID."""
+        if self._auto_update:
+            for item_id in item_ids:
+                self.update_daily(item_id)
+
+        rows_opt = self._execute(f"SELECT * FROM daily_history WHERE id IN ({','.join(list(map(str, item_ids)))}) ORDER BY utc_timestamp ASC")
+        if rows_opt is None:
+            logger.debug(f"Database returned no rows")
+            return None
+        rows = rows_opt
+
+        dailies = {}
+        for entry in list(map(row_to_history_entry, rows)):
+            if not entry.id in dailies:
+                dailies[entry.id] = []
+            dailies[entry.id] += [entry]
+
+        return dailies
 
     def _daily_history_ids(self, ):
         """Return list of unique IDs in daily_history table."""

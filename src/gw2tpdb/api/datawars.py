@@ -1,8 +1,10 @@
+import time
 import logging
 import requests
 import json
 
-from datetime import datetime
+from ratelimit import limits, sleep_and_retry
+from datetime import datetime, timedelta
 from typing import Optional, List, TypeVar, Callable
 from gw2tpdb.api.item import ItemEntry, item_json_to_dataclass
 from gw2tpdb.api.history import HistoryEntry, history_json_to_dataclass
@@ -15,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 deadline_seconds = 5
 
+# Limit to 1 QPS to be kind to the non-profit API host.
+@sleep_and_retry
+@limits(calls=1, period=timedelta(seconds=1).total_seconds())
 def _datawars_get(url: str) -> Optional[requests.Response]:
     """Make a request to the Datawars API and return the resulting JSON if successful."""
 
