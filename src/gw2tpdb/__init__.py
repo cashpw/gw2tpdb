@@ -1,4 +1,5 @@
 import logging
+import math
 import pytz
 
 from typing import Any, Optional, List
@@ -26,30 +27,36 @@ class Gw2TpDb():
         """TODO"""
         self.conn.close()
 
-    def update_daily(self, item_id: int) -> bool:
+    def update_daily(self, item_id: int, full_download: bool = False) -> bool:
         """Download and write missing daily data for item_id to database.
 
         Return false when unsuccessful.
 
+        Skip checks if start provided.
+
         Idempotent."""
 
-        most_recent_local_timestamp_opt = self._most_recent_local_daily_timestamp(item_id)
-        if most_recent_local_timestamp_opt is None:
+        if full_download:
             logger.debug(f"Daily history data for item_id {item_id} not found in database. Will download full history.")
             start = None
         else:
-            most_recent_local_timestamp = most_recent_local_timestamp_opt
-            most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
-            logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
-            if most_recent_local_timestamp > most_recent_remote_timestamp:
-                logger.debug(f"Daily history data for item_id {item_id} is more recent than most-recent remote data. Skipping update.")
-                return True
-            if most_recent_local_timestamp == most_recent_remote_timestamp:
-                logger.debug(f"Daily history data for item_id {item_id} is up to date. Skipping update.")
-                return True
+            most_recent_local_timestamp_opt = self._most_recent_local_daily_timestamp(item_id)
+            if most_recent_local_timestamp_opt is None:
+                logger.debug(f"Daily history data for item_id {item_id} not found in database. Will download full history.")
+                start = None
             else:
-                logger.debug(f"Daily history data for item_id {item_id} is out of date. Most recent available data is dated at {most_recent_remote_timestamp} whereas the latest in database is {most_recent_local_timestamp}. Will download partial history.")
-                start = (most_recent_local_timestamp + timedelta(days=1)).date()
+                most_recent_local_timestamp = most_recent_local_timestamp_opt
+                most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
+                logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
+                if most_recent_local_timestamp > most_recent_remote_timestamp:
+                    logger.debug(f"Daily history data for item_id {item_id} is more recent than most-recent remote data. Skipping update.")
+                    return True
+                if most_recent_local_timestamp == most_recent_remote_timestamp:
+                    logger.debug(f"Daily history data for item_id {item_id} is up to date. Skipping update.")
+                    return True
+                else:
+                    logger.debug(f"Daily history data for item_id {item_id} is out of date. Most recent available data is dated at {most_recent_remote_timestamp} whereas the latest in database is {most_recent_local_timestamp}. Will download partial history.")
+                    start = (most_recent_local_timestamp + timedelta(days=1)).date()
 
         daily_data_opt = get_daily(item_id, start=start)
         if daily_data_opt is None:
@@ -68,23 +75,48 @@ class Gw2TpDb():
 
         Idempotent."""
 
-        oldest_most_recent_local_timestamp_opt = self._oldest_most_recent_local_daily_timestamp(item_ids)
-        if oldest_most_recent_local_timestamp_opt is None:
-            logger.debug(f"Daily history data for one of item_ids ({item_ids}) not found in database. Will download full history.")
-            start = None
-        else:
-            oldest_most_recent_local_timestamp = oldest_most_recent_local_timestamp_opt
-            most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
-            logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
-            if oldest_most_recent_local_timestamp > most_recent_remote_timestamp:
-                logger.debug(f"Daily history data for all item_ids ({item_ids}) is more recent than most-recent remote data. Skipping update.")
-                return True
-            if oldest_most_recent_local_timestamp == most_recent_remote_timestamp:
-                logger.debug(f"Daily history data for all item_ids ({item_ids}) are up to date. Skipping update.")
-                return True
-            else:
-                logger.debug(f"Daily history data is out of date. Most recent available data is dated at {most_recent_remote_timestamp} whereas the oldest most-recent in database is {oldest_most_recent_local_timestamp}. Will download partial history for all item ids ({item_ids}).")
-                start = (oldest_most_recent_local_timestamp + timedelta(days=1)).date()
+        # TODO: Squash this into a single SQL query
+        most_recent_local_timestamps = self._most_recent_local_daily_timestamps(item_ids)
+
+        item_ids_not_in_db = [key for key in most_recent_local_timestamps if most_recent_local_timestamps[key] is None]
+        if (len(item_ids_not_in_db) > 0):
+            logger.debug(f"{len(item_ids_not_in_db)} item IDs are missing from the database. Will download full history with individual requests.")
+
+            for i, item_id in enumerate(item_ids_not_in_db):
+                most_recent_local_timestamp = most_recent_local_timestamps[item_id]
+                self.update_daily(item_id, full_download=True)
+
+        item_ids_in_db = [key for key in most_recent_local_timestamps if most_recent_local_timestamps[key] is not None]
+        logger.debug(5)
+        if (len(item_ids_in_db) == 0):
+            return True
+
+        logger.debug(f"{len(item_ids_in_db)} item IDs are present in db. Will download partial history with bulk requests.")
+        sublist_length = 50
+        sublist_count = math.ceil(len(item_ids_in_db) / sublist_length)
+        most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
+        logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
+        for item_ids in [item_ids_in_db[i*sublist_length:(i+1)*sublist_length] for i in range(sublist_count)]:
+            self._update_dailies(item_ids, most_recent_local_timestamps, most_recent_remote_timestamp)
+
+        self.conn.commit()
+
+        return True
+
+    def _update_dailies(self, item_ids: int, most_recent_local_timestamps: dict[int, datetime], most_recent_remote_timestamp: datetime) -> bool:
+        """TODO"""
+
+        oldest_most_recent_local_timestamp = self._oldest_timestamp([most_recent_local_timestamps[item_id] for item_id in item_ids])
+        if oldest_most_recent_local_timestamp > most_recent_remote_timestamp:
+            logger.debug(f"Daily history data for all item_ids ({item_ids}) is more recent than most-recent remote data. Skipping update.")
+            return True
+
+        if oldest_most_recent_local_timestamp == most_recent_remote_timestamp:
+            logger.debug(f"Daily history data for all item_ids ({item_ids}) are up to date. Skipping update.")
+            return True
+
+        logger.debug(f"Daily history data is out of date. Most recent available data is dated at {most_recent_remote_timestamp} whereas the oldest most-recent in database is {oldest_most_recent_local_timestamp}. Will download partial history for all item ids ({item_ids}).")
+        start = (oldest_most_recent_local_timestamp + timedelta(days=1)).date()
 
         daily_entries_opt = get_dailies(item_ids, start=start)
         if daily_entries_opt is None:
@@ -102,9 +134,6 @@ class Gw2TpDb():
 
             self._write_daily(entries_to_write, commit=False)
 
-        self.conn.commit()
-
-        return True
 
     def populate_items(self) -> bool:
         """Download and write item data to database.
@@ -142,23 +171,23 @@ class Gw2TpDb():
     def get_dailies(self, item_ids: List[int]) -> Optional[dict[List[HistoryEntry]]]:
         """Return daily data for ITEM_ID."""
         if self._auto_update:
-            """
-            for item_id in item_ids:
-                self.update_daily(item_id)
-            """
             self.update_dailies(item_ids)
 
+        logger.debug("Querying database")
         rows_opt = self._execute(f"SELECT * FROM daily_history WHERE id IN ({','.join(list(map(str, item_ids)))}) ORDER BY utc_timestamp ASC")
         if rows_opt is None:
             logger.debug(f"Database returned no rows")
             return None
         rows = rows_opt
+        logger.debug(f"Done querying database")
 
         dailies = {}
+        logger.debug(f"Parsing {len(rows)} database rows")
         for entry in list(map(row_to_history_entry, rows)):
             if not entry.id in dailies:
                 dailies[entry.id] = []
             dailies[entry.id] += [entry]
+        logger.debug(f"Done parsing {len(rows)} database rows")
 
         return dailies
 
@@ -207,21 +236,26 @@ class Gw2TpDb():
 
         return most_recent_datetime
 
-    def _oldest_most_recent_local_daily_timestamp(self, item_ids: List[int]) -> Optional[datetime]:
-        """Return oldest most recent timestamp of item_ids in daily table.
+    def _most_recent_local_daily_timestamps(self, item_ids: List[int]) -> dict[int, Optional[datetime]]:
+        """Return most recent timestamp for item_id in daily table.
 
-        Returns None if any item_id is absent from the table."""
+        Returns None if item_id is absent from the table."""
 
-        # TODO: Squash this into a single SQL query
-        oldest_most_recent_datetime = pytz.utc.localize(datetime.max)
+        most_recent_timestamps = {}
         for item_id in item_ids:
-            most_recent_timestamp = self._most_recent_local_daily_timestamp(item_id)
-            if most_recent_timestamp is None:
-                return None
-            if most_recent_timestamp < oldest_most_recent_datetime:
-                oldest_most_recent_datetime = most_recent_timestamp
+            most_recent_timestamps[item_id] = self._most_recent_local_daily_timestamp(item_id)
 
-        return oldest_most_recent_datetime
+        return most_recent_timestamps
+
+    def _oldest_timestamp(self, timestamps: List[datetime]) -> datetime:
+        """Return oldest timestamp."""
+
+        oldest_timestamp = pytz.utc.localize(datetime.max)
+        for timestamp in timestamps:
+            if timestamp < oldest_timestamp:
+                oldest_timestamp = timestamp
+
+        return oldest_timestamp
 
     def _execute(self, query: str) -> Optional[List[tuple]]:
         """Execute given query and return results if present."""
