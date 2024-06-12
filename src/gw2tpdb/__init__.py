@@ -68,7 +68,7 @@ class Gw2TpDb():
 
         return True
 
-    def update_dailies(self, item_ids: int) -> bool:
+    def update_dailies(self, item_ids: int, chunk_size: int = 20) -> bool:
         """Download and write missing daily data for each ID in item_ids.
 
         Return false when unsuccessful.
@@ -92,11 +92,10 @@ class Gw2TpDb():
             return True
 
         logger.debug(f"{len(item_ids_in_db)} item IDs are present in db. Will download partial history with bulk requests.")
-        sublist_length = 50
-        sublist_count = math.ceil(len(item_ids_in_db) / sublist_length)
+        sublist_count = math.ceil(len(item_ids_in_db) / chunk_size)
         most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
         logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
-        for item_ids in [item_ids_in_db[i*sublist_length:(i+1)*sublist_length] for i in range(sublist_count)]:
+        for item_ids in [item_ids_in_db[i*chunk_size:(i+1)*chunk_size] for i in range(sublist_count)]:
             self._update_dailies(item_ids, most_recent_local_timestamps, most_recent_remote_timestamp)
 
         self.conn.commit()
