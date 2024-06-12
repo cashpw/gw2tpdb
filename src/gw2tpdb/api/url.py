@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from urllib.parse import urlencode
 from gw2tpdb.api.endpoint import Endpoint
@@ -15,11 +15,11 @@ def _build_request_url(endpoint: Endpoint, params: dict = {}) -> str:
 
     return url
 
-def build_history_request_url(endpoint: Endpoint, item_id: int, start: Optional[datetime] = None, end: Optional[datetime] = None) -> str:
+def build_history_request_url(endpoint: Endpoint, item_ids: List[int], start: Optional[datetime] = None, end: Optional[datetime] = None) -> str:
     """Return URL for a /history endpoint request."""
 
     params = {
-        "itemID": item_id,
+        "itemID": ",".join([str(id) for id in item_ids])
     }
 
     if start:

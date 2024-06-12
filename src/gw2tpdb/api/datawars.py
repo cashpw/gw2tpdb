@@ -62,8 +62,22 @@ def get_items() -> Optional[List[ItemEntry]]:
 def get_daily(item_id: int, start: Optional[datetime] = None, end: Optional[datetime] = None) -> Optional[List[HistoryEntry]]:
     """Fetch daily historic data for given ITEM_ID."""
 
-    return _datawars_get_as_dataclass_list(build_history_request_url(Endpoint.HISTORY_DAILY_JSON, item_id, start, end), history_json_to_dataclass)
+    return _datawars_get_as_dataclass_list(build_history_request_url(Endpoint.HISTORY_DAILY_JSON, [item_id], start, end), history_json_to_dataclass)
 
+def get_dailies(item_ids: List[int], start: Optional[datetime] = None, end: Optional[datetime] = None) -> Optional[dict[int, List[HistoryEntry]]]:
+    """Fetch daily historic data for given ITEM_IDS."""
+
+    entries_opt = _datawars_get_as_dataclass_list(build_history_request_url(Endpoint.HISTORY_DAILY_JSON, item_ids, start, end), history_json_to_dataclass)
+    if entries_opt is None:
+        return None
+    entries = entries_opt
+
+    entries_dict = {}
+    for entry in entries:
+        if entry.id not in entries_dict:
+            entries_dict[entry.id] = []
+        entries_dict[entry.id].append(entry)
+    return entries_dict
 
 def get_hourly(item_id: int, start: Optional[datetime] = None, end: Optional[datetime] = None) -> Optional[List[HistoryEntry]]:
     """Fetch hourly historic data for given ITEM_ID."""
