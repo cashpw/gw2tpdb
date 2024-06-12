@@ -40,6 +40,7 @@ class Gw2TpDb():
         else:
             most_recent_local_timestamp = most_recent_local_timestamp_opt
             most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
+            logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
             if most_recent_local_timestamp > most_recent_remote_timestamp:
                 logger.debug(f"Daily history data for item_id {item_id} is more recent than most-recent remote data. Skipping update.")
                 return True
@@ -74,11 +75,12 @@ class Gw2TpDb():
         else:
             oldest_most_recent_local_timestamp = oldest_most_recent_local_timestamp_opt
             most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
+            logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
             if oldest_most_recent_local_timestamp > most_recent_remote_timestamp:
-                logger.debug(f"Daily history data for item_id {item_id} is more recent than most-recent remote data. Skipping update.")
+                logger.debug(f"Daily history data for all item_ids ({item_ids}) is more recent than most-recent remote data. Skipping update.")
                 return True
             if oldest_most_recent_local_timestamp == most_recent_remote_timestamp:
-                logger.debug(f"Daily history data for item_id {item_id} is up to date. Skipping update.")
+                logger.debug(f"Daily history data for all item_ids ({item_ids}) are up to date. Skipping update.")
                 return True
             else:
                 logger.debug(f"Daily history data is out of date. Most recent available data is dated at {most_recent_remote_timestamp} whereas the oldest most-recent in database is {oldest_most_recent_local_timestamp}. Will download partial history for all item ids ({item_ids}).")
