@@ -1,6 +1,6 @@
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "gw2tpdb"
@@ -11,6 +11,10 @@ authors = [
 description = "Database for Guild Wars 2 Trading Post"
 readme = "README.md"
 requires-python = ">=3.8"
+dependencies = [
+    "requests",
+    "ratelimit",
+]
 
 [project.urls]
 Homepage = "https://github.com/cashpw/gw2tpdb"

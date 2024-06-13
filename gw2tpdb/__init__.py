@@ -87,7 +87,6 @@ class Gw2TpDb():
                 self.update_daily(item_id, full_download=True)
 
         item_ids_in_db = [key for key in most_recent_local_timestamps if most_recent_local_timestamps[key] is not None]
-        logger.debug(5)
         if (len(item_ids_in_db) == 0):
             return True
 
