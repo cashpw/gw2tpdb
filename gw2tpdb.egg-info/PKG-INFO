@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: gw2tpdb
+Version: 0.0.1
+Summary: Database for Guild Wars 2 Trading Post
+Author: Cash Prokop-Weaver
+Project-URL: Homepage, https://github.com/cashpw/gw2tpdb
+Project-URL: Issues, https://github.com/cashpw/gw2tpdb/issues
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: requests
+Requires-Dist: ratelimit
+
+# Guild Wars 2 Trading Post Database
+
+We populate the database through [Datawars](https://gitlab.com/Silvers_Gw2/Market_Data_Processer/-/wikis/endpoints).

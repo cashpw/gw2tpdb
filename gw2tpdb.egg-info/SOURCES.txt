@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+gw2tpdb/__init__.py
+gw2tpdb.egg-info/PKG-INFO
+gw2tpdb.egg-info/SOURCES.txt
+gw2tpdb.egg-info/dependency_links.txt
+gw2tpdb.egg-info/requires.txt
+gw2tpdb.egg-info/top_level.txt
+gw2tpdb/api/__init__.py
+gw2tpdb/api/datawars.py
+gw2tpdb/api/datawars_test.py
+gw2tpdb/api/endpoint.py
+gw2tpdb/api/history.py
+gw2tpdb/api/item.py
+gw2tpdb/api/url.py
+gw2tpdb/db/__init__.py
+gw2tpdb/db/db.py
