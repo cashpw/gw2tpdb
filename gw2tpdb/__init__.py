@@ -90,7 +90,6 @@ class Gw2TpDb():
         if (len(item_ids_in_db) == 0):
             return True
 
-        logger.debug(f"{len(item_ids_in_db)} item IDs are present in db. Will download partial history with bulk requests.")
         sublist_count = math.ceil(len(item_ids_in_db) / chunk_size)
         most_recent_remote_timestamp = self._most_recent_remote_daily_timestamp()
         logger.debug(f"Most recent remote data is dated {most_recent_remote_timestamp}")
@@ -116,11 +115,10 @@ class Gw2TpDb():
         logger.debug(f"Daily history data is out of date. Most recent available data is dated at {most_recent_remote_timestamp} whereas the oldest most-recent in database is {oldest_most_recent_local_timestamp}. Will download partial history for all item ids ({item_ids}).")
         start = (oldest_most_recent_local_timestamp + timedelta(days=1)).date()
 
-        daily_entries_opt = get_dailies(item_ids, start=start)
-        if daily_entries_opt is None:
+        daily_entries = get_dailies(item_ids, start=start)
+        if daily_entries is None:
             logger.error(f"Daily history data download returned None. Cannot update item_ids ({item_ids}).")
             return False
-        daily_entries = daily_entries_opt
 
         for item_id, entries in daily_entries.items():
             most_recent_local_timestamp_opt = self._most_recent_local_daily_timestamp(item_id)
